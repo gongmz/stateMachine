@@ -62,8 +62,16 @@ int stateM_handleEvent( struct stateMachine *fsm,
        * states (if any): */
       if ( !transition )
       {
-         nextState = nextState->parentState;
-         continue;
+         /* 如果没有父状态，仅执行事件，不进行状态切换
+         *  TODO:目前仅支持执行此状态的上一级状态的事件执行，不支持2级以上的父状态事件执行
+         */
+         transition = getTransition( fsm, nextState->parentState, event );
+
+         /* Run transition action (if any): */
+         if ( transition && transition->action )
+            transition->action( fsm->currentState->data, event, nextState->data );
+
+         return stateM_noStateChange;    
       }
 
       /* A transition must have a next state defined. If the user has not
@@ -79,6 +87,9 @@ int stateM_handleEvent( struct stateMachine *fsm,
       /* If the new state is a parent state, enter its entry state (if it has
        * one). Step down through the whole family tree until a state without
        * an entry state is found: */
+      /* 一般情况只有父状态有entryState
+      *  TODO:entryState是不是应该在inti的时候就应该记录下来，而不是每次都要配置
+      */
       while ( nextState->entryState )
          nextState = nextState->entryState;
 
